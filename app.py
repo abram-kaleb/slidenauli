@@ -107,7 +107,7 @@ def check_tata_ibadah_validation(file):
             break
 
     date_match = re .search(
-        r'(\d{1,2}[\s\-\/](?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember|[0-9]{1,2})[\s\-\/]\d{4})',
+        r'(\d{1,2}[\s\-\/](?:Januari|Februari|Pebruari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember|[0-9]{1,2})[\s\-\/]\d{4})',
         full_text,
         re .IGNORECASE)
     tgl_info = f" ({date_match .group(1)})"if date_match else ""
@@ -291,8 +291,8 @@ def add_smart_slide(
                 reduction = (char_count - 80)//4
                 size = 72 - reduction
 
-            if size < 54:
-                size = 54
+            if size < 44:
+                size = 44
 
         adjusted_font = Pt(size)
 
@@ -396,36 +396,41 @@ def add_smart_slide(
 
 def format_be_title(line, slide_format="Projector"):
 
-    line = re .sub(r'♫|♪|\v|\n|\r|\t', ' ', line)
-    line = " ".join(line .split())
+    line_clean = re.sub(r'♫|♪|\v|\n|\r|\t', ' ', line)
+    line_clean = " ".join(line_clean.split())
 
-    line = re .sub(r'MARENDE|BERNYANYI|PAPUNGU PELEAN',
-                   '', line, flags=re .IGNORECASE).strip()
-    line = re .sub(r'\(.*?\)', '', line).strip()
+    is_song = re.search(r'(B\.?E\.?|HKBP|NO\.?)\s*\d+',
+                        line_clean, re.IGNORECASE)
 
-    match = re .search(
-        r"(B\.?E\.?\s*(?:HKBP\.?)?)\s*(?:No\.?\s*)?([\d\s\.\-\:–,]+)(.*)",
-        line,
-        re .IGNORECASE
-    )
+    if is_song:
 
-    if match:
-        tag = "B.E. HKBP"
-        nomor = re .sub(r'[,\.\s]+$', '', match .group(2).strip()).strip()
+        line_song = re.sub(r'^(MARENDE|BERNYANYI|PAPUNGU PELEAN)\s+',
+                           '', line_clean, flags=re.IGNORECASE).strip()
 
-        judul = match .group(3).strip()
-        judul = judul .replace('“', '').replace(
-            '”', '').replace('"', '').strip()
-        judul = re .sub(r'^[:\-–\s,]+', '', judul).strip()
+        match = re.search(
+            r"(B\.?E\.?\s*(?:HKBP\.?)?)\s*(?:No\.?\s*)?([\d\s\.\-\:–,]+)(.*)",
+            line_song,
+            re.IGNORECASE
+        )
 
-        if slide_format == "Streaming":
+        if match:
+            tag = "B.E. HKBP"
+            nomor = re.sub(r'[,\.\s]+$', '', match.group(2).strip()).strip()
 
-            return f"{tag} No. {nomor}\n“{judul .upper()}”"
-        else:
+            judul_raw = match.group(3).strip()
+            judul_clean = re.sub(r'\b(BL|B\.?L|BE|B\.?E|BN|B\.?N)\.?\s*\d+.*$',
+                                 '', judul_raw, flags=re.IGNORECASE).strip()
 
-            return f"{tag}\nNo. {nomor}\n“{judul .upper()}”"
+            judul_final = judul_clean.replace('“', '').replace(
+                '”', '').replace('"', '').strip()
+            judul_final = re.sub(r'^[:\-–\s,]+', '', judul_final).strip()
 
-    return line .upper()
+            if slide_format == "Streaming":
+                return f"{tag} No. {nomor}\n“{judul_final.upper()}”"
+            else:
+                return f"{tag}\nNo. {nomor}\n“{judul_final.upper()}”"
+
+    return line_clean.upper()
 
 
 def get_clean_content(file):
@@ -715,7 +720,7 @@ def generate_projector_logic(
                     i += 1
                     continue
                 if any(s in l_res .upper()
-                       for s in ["BERNYANYI", "MARENDE", "EPISTEL", "5."]):
+                       for s in ["BERNYANYI", "MARENDE", "EPISTEL", ""]):
                     break
                 if not re .search(
                     r'BERDIRI|JONGJONG|HUNDUL|~~~|\[.*?\]',
@@ -842,7 +847,7 @@ def generate_projector_logic(
                 i += 1
             continue
 
-        elif check_match(line_clean, key .get("10_koor", ["KOOR", "PADUAN SUARA"])):
+        elif check_match(line_clean, key .get("10_koor", ["KOOR", "K O O R", "PADUAN SUARA"])):
 
             active_bg = random .randint(1, 214)
             add_smart_slide(
@@ -901,6 +906,45 @@ def generate_projector_logic(
                         font_size=40,
                         slide_format=slide_format,
                         current_bg=active_bg)
+            continue
+
+        elif check_match(line_clean, key["11_tutup"]) and "11_tutup"not in done_sections:
+            theme_idx += 1
+            active_bg = random .randint(1, 214)
+
+            add_smart_slide(
+                prs,
+                line_clean .rstrip(':').upper(),
+                theme_idx,
+                slide_format=slide_format,
+                current_bg=active_bg)
+            done_sections .add("11_tutup")
+            i += 1
+            while i < len(tata_lines):
+                l_res = tata_lines[i].strip()
+                if not l_res:
+                    i += 1
+                    continue
+                l_check = re .sub(r'^\d+[\s\.]+', '', l_res).strip().upper()
+                if check_match(
+                    l_check,
+                    key["1_marende"]) or check_match(
+                    l_check,
+                    key["6_iman"]) or re .match (
+                    r'^\d+[\s\.]+(BERNYANYI|MARENDE|IMAN|MANGHATINDANGHON)',
+                        l_res .upper()):
+                    break
+                if not re .search(
+                    r'JONGJONG|HUNDUL|~~~',
+                    l_res,
+                        re .IGNORECASE):
+                    add_smart_slide(
+                        prs,
+                        l_res,
+                        theme_idx,
+                        slide_format=slide_format,
+                        current_bg=active_bg)
+                i += 1
             continue
 
         i += 1
@@ -1206,7 +1250,7 @@ with col1:
             st .warning(message_tata)
 
 with col2:
-    w_file = st .file_uploader("📂 Buka file warta simpan sebagai docx lalu upload di sini",
+    w_file = st .file_uploader("📂 Upload Warta Jemaat",
                                type=["docx"], key="w_up")
 
     if w_file:
