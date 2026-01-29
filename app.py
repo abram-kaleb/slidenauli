@@ -391,7 +391,7 @@ def add_smart_slide(
 
     run .font .color .rgb = font_color_main
 
-    if footer and slide_format == "Projector":
+    if footer and slide_format == "Projector" and check_real_text:
         f_box = slide .shapes .add_textbox(
             0, Pt(620), prs .slide_width, Pt(80))
         pf = f_box .text_frame .paragraphs[0]
@@ -593,17 +593,20 @@ def generate_projector_logic(
 
                     if all_lines:
                         for n in range(0, len(all_lines), 2):
-
                             content_to_print = "\n".join(
                                 all_lines[n:n + 2]).strip()
 
-                            if content_to_print:
+                            raw_content = re .sub(
+                                r'[♫♪\(\)\-\s]', '', content_to_print)
+
+                            if len(raw_content) > 0:
                                 add_smart_slide(
                                     prs,
                                     content_to_print,
                                     theme_idx,
                                     slide_format=slide_format,
                                     current_bg=active_bg)
+
                         all_lines = []
 
                     stand_text = "JONGJONG"if bahasa == 'Batak'else 'BERDIRI'
