@@ -1250,7 +1250,7 @@ with col1:
             st .warning(message_tata)
 
 with col2:
-    w_file = st .file_uploader("📂 Upload Warta Jemaat",
+    w_file = st .file_uploader("📂 Buka file warta simpan sebagai docx lalu upload di sini",
                                type=["docx"], key="w_up")
 
     if w_file:
