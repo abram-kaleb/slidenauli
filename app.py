@@ -396,41 +396,54 @@ def add_smart_slide(
 
 def format_be_title(line, slide_format="Projector"):
 
-    line_clean = re.sub(r'♫|♪|\v|\n|\r|\t', ' ', line)
-    line_clean = " ".join(line_clean.split())
+    line_clean = re .sub(r'♫|♪|\v|\n|\r|\t', ' ', line)
+    line_clean = " ".join(line_clean .split())
 
-    is_song = re.search(r'(B\.?E\.?|HKBP|NO\.?)\s*\d+',
-                        line_clean, re.IGNORECASE)
+    is_song = re .search(r'(B\.?E\.?|HKBP|NO\.?)\s*\d+',
+                         line_clean, re .IGNORECASE)
 
     if is_song:
 
-        line_song = re.sub(r'^(MARENDE|BERNYANYI|PAPUNGU PELEAN)\s+',
-                           '', line_clean, flags=re.IGNORECASE).strip()
+        line_song = re .sub(r'^(MARENDE|BERNYANYI|PAPUNGU PELEAN)\s+',
+                            '', line_clean, flags=re .IGNORECASE).strip()
 
-        match = re.search(
+        match = re .search(
             r"(B\.?E\.?\s*(?:HKBP\.?)?)\s*(?:No\.?\s*)?([\d\s\.\-\:–,]+)(.*)",
             line_song,
-            re.IGNORECASE
+            re .IGNORECASE
         )
 
         if match:
             tag = "B.E. HKBP"
-            nomor = re.sub(r'[,\.\s]+$', '', match.group(2).strip()).strip()
+            nomor = re .sub(r'[,\.\s]+$', '', match .group(2).strip()).strip()
+            judul_raw = match .group(3).strip()
 
-            judul_raw = match.group(3).strip()
-            judul_clean = re.sub(r'\b(BL|B\.?L|BE|B\.?E|BN|B\.?N)\.?\s*\d+.*$',
-                                 '', judul_raw, flags=re.IGNORECASE).strip()
+            judul_clean = re .sub(
+                r'[\(\[\{]?(?:BL|B\.?L|BE|B\.?E|BN|B\.?N)\.?\s*\d+.*[\)\]\}]?',
+                '',
+                judul_raw,
+                flags=re .IGNORECASE).strip()
 
-            judul_final = judul_clean.replace('“', '').replace(
-                '”', '').replace('"', '').strip()
-            judul_final = re.sub(r'^[:\-–\s,]+', '', judul_final).strip()
+            judul_clean = re .sub(
+                r'\b(?:BL|B\.?L|BE|B\.?E|BN|B\.?N)\.?\s*\d+.*$',
+                '',
+                judul_clean,
+                flags=re .IGNORECASE).strip()
+
+            judul_final = re .sub(
+                r'[“”"\'‘’\(\)\[\]]', '', judul_clean).strip()
+
+            judul_final = re .sub(r'^[:\-–\s,]+', '', judul_final).strip()
+
+            formatted_judul = f"“{judul_final .upper()}”"if judul_final else ""
 
             if slide_format == "Streaming":
-                return f"{tag} No. {nomor}\n“{judul_final.upper()}”"
+                res = f"{tag} No. {nomor}"
+                return f"{res}\n{formatted_judul}".strip()
             else:
-                return f"{tag}\nNo. {nomor}\n“{judul_final.upper()}”"
+                return f"{tag}\nNo. {nomor}\n{formatted_judul}".strip()
 
-    return line_clean.upper()
+    return line_clean .upper()
 
 
 def get_clean_content(file):
@@ -556,10 +569,23 @@ def generate_projector_logic(
                         ALL_STOPS):
                     break
 
-                if re .search(r'BERDIRI|JONGJONG|~~', txt, re .IGNORECASE):
+                is_stand = re .search(
+                    r'BERDIRI|JONGJONG|~~', txt, re .IGNORECASE)
+
+                if is_stand:
+
+                    lyric_part = re .sub(
+                        r'\[?JONGJONG\]?|\[?BERDIRI\]?|~~',
+                        '',
+                        txt,
+                        flags=re .IGNORECASE).strip()
+                    lyric_part = re .sub(r'♫|♪', '', lyric_part).strip()
+
+                    if lyric_part:
+                        all_lines .append(lyric_part)
+
                     if all_lines:
                         for n in range(0, len(all_lines), 2):
-
                             add_smart_slide(prs,
                                             "\n".join(all_lines[n:n + 2]),
                                             theme_idx,
@@ -576,9 +602,9 @@ def generate_projector_logic(
                         current_bg=active_bg)
 
                 elif not txt:
+
                     if all_lines:
                         for n in range(0, len(all_lines), 2):
-
                             add_smart_slide(prs,
                                             "\n".join(all_lines[n:n + 2]),
                                             theme_idx,
@@ -586,16 +612,23 @@ def generate_projector_logic(
                                             current_bg=active_bg)
                         all_lines = []
                 else:
+
                     sub_lines = txt .split('\n')
                     for sl in sub_lines:
                         clean_sl = re .sub(r'♫|♪', '', sl).strip()
+
+                        is_book_code = re .match (
+                            r'^(BL|B\.L|BE|B\.E|BN|B\.N)\.?\s*\d+\s*$', clean_sl, re .IGNORECASE)
+                        if is_book_code:
+                            continue
+
                         if clean_sl:
                             all_lines .append(clean_sl)
+
                 i += 1
 
             if all_lines:
                 for n in range(0, len(all_lines), 2):
-
                     add_smart_slide(prs,
                                     "\n".join(all_lines[n:n + 2]),
                                     theme_idx,
@@ -603,61 +636,83 @@ def generate_projector_logic(
                                     current_bg=active_bg)
             continue
 
-        elif any(check_match(line_clean, key[k])for k in ["2_votum", "3_patik", "4_dosa", "5_epistel", "6_iman"]):
+        elif any(check_match(line_clean, key[k])for k in ["3_patik"]):
+            active_bg = random .randint(1, 214)
 
-            is_votum = check_match(line_clean, key["2_votum"])
+            found_ayat = ""
+            for offset in range(1, 6):
+                if i + offset < len(tata_lines):
+                    next_line = tata_lines[i + offset].strip()
+                    if not next_line or next_line .startswith("("):
+                        continue
 
-            if is_votum:
+                    clean_line = re .sub(
+                        r'^[PU]\s*[:：]\s*',
+                        '',
+                        next_line,
+                        flags=re .IGNORECASE).strip()
 
-                judul_bagian = "VOTUM\nINTROITUS\nDOA"if bahasa == "Indonesia"else "VOTUM\nINTROITUS\nTANGIANG"
+                    match_hukum = re .search(
+                        r'((HUKUM|PATIK)\s+(YANG\s+)?(PERTAMA|I|KEDUA|II|KE[\w]+).*)',
+                        clean_line,
+                        re .IGNORECASE)
 
-                add_smart_slide(
-                    prs,
-                    judul_bagian,
-                    0,
-                    font_size=72,
-                    slide_format=slide_format,
-                    current_bg=active_bg)
-            else:
-                judul_bagian = line_clean .upper()
-                add_smart_slide(
-                    prs,
-                    judul_bagian,
-                    0,
-                    font_size=72,
-                    slide_format=slide_format,
-                    current_bg=active_bg)
+                    match_ref = re .search(
+                        r'([A-Za-z0-9\s]+\d+\s*[:：]\s*[\d\-\s]+)', clean_line)
+
+                    if match_hukum:
+                        found_ayat = match_hukum .group(1).strip().upper()
+
+                        if ":" in found_ayat and len(
+                                found_ayat .split(":")[1]) > 50:
+                            found_ayat = found_ayat .split(":")[0].strip()
+                        break
+                    elif match_ref:
+                        found_ayat = match_ref .group(1).strip().upper()
+
+                        found_ayat = re .sub(
+                            r'^I\s+MA\s+', '', found_ayat).strip()
+                        break
+
+                    if "HUKUM" in clean_line .upper() or "PATIK" in clean_line .upper():
+
+                        parts = re .split(r'yaitu|yakni|i ma',
+                                          clean_line, flags=re .IGNORECASE)
+                        if len(parts) > 1:
+                            found_ayat = parts[1].strip().upper()
+                            break
+
+            nama_kategori = key["3_patik"][0].upper()
+
+            found_ayat = found_ayat .rstrip(".:")
+
+            judul_gabungan = f"{nama_kategori}\n{found_ayat}"if found_ayat else nama_kategori
+            add_smart_slide(prs, judul_gabungan, 0, font_size=72,
+                            slide_format=slide_format, current_bg=active_bg)
 
             i += 1
             while i < len(tata_lines):
-                l_res = tata_lines[i].strip()
-                if not l_res:
+                target_line = tata_lines[i].strip().upper()
+                if not target_line:
                     i += 1
                     continue
 
-                l_check = re .sub(r'^\d+[\s\.]+', '', l_res).strip().upper()
-
-                if check_match(
-                        l_check,
-                        key["1_marende"]) or check_match(
-                        l_check,
-                        ALL_STOPS):
+                if any(
+                    stop in target_line for stop in [
+                        "MARENDE",
+                        "BE.",
+                        "BN.",
+                        "KJ.",
+                        "PKJ.",
+                        "MANOPOTI",
+                        "DOSA",
+                        "4.",
+                        "5."]):
+                    i -= 1
                     break
-
-                if not is_votum:
-                    if not re .search(
-                        r'JONGJONG|HUNDUL|~~~',
-                        l_res,
-                            re .IGNORECASE):
-                        add_smart_slide(
-                            prs,
-                            l_res,
-                            0,
-                            font_size=72,
-                            slide_format=slide_format,
-                            current_bg=active_bg)
-
                 i += 1
+
+            i += 1
             continue
 
         elif check_match(line_clean, key["3_patik"]) and "3_patik"not in done_sections:
@@ -677,12 +732,12 @@ def generate_projector_logic(
                     i += 1
                     continue
                 if check_match(
-                        re .sub(
-                            r'^\d+[\s\.]+',
-                            '',
-                            l_res).strip(),
-                        key["1_marende"]) or re .match (
-                        r'^(4|5|6)[\s\.]+',
+                    re .sub(
+                        r'^\d+[\s\.]+',
+                        '',
+                        l_res).strip(),
+                    key["1_marende"]) or re .match (
+                    r'^(4|5|6)[\s\.]+',
                         l_res):
                     break
 
@@ -847,17 +902,41 @@ def generate_projector_logic(
                 i += 1
             continue
 
-        elif check_match(line_clean, key .get("10_koor", ["KOOR", "K O O R", "PADUAN SUARA"])):
-
+        elif check_match(line_clean, key .get("7_koor", ["KOOR", "K O O R", "PADUAN SUARA"])):
             active_bg = random .randint(1, 214)
+
+            first_line = re .sub(r'^\d+[\s\.]+', '', line).strip()
+            koor_list = [first_line]
+
+            i += 1
+
+            while i < len(tata_lines):
+                next_l = tata_lines[i].strip()
+                if not next_l:
+                    i += 1
+                    continue
+
+                if check_match(
+                        re .sub(
+                            r'^\d+[\s\.]+',
+                            '',
+                            next_l).strip(),
+                        ALL_STOPS):
+                    break
+
+                koor_list .append(next_l)
+                i += 1
+
+            full_koor_text = "\n".join(koor_list)
+
             add_smart_slide(
                 prs,
-                line_clean .upper(),
+                full_koor_text,
                 0,
-                font_size=72,
+                font_size=45,
                 slide_format=slide_format,
-                current_bg=active_bg)
-            i += 1
+                current_bg=active_bg
+            )
             continue
 
         elif check_match(line_clean, key .get("7_jamita", ["JAMITA", "KHOTBAH"])):
@@ -1250,8 +1329,10 @@ with col1:
             st .warning(message_tata)
 
 with col2:
-    w_file = st .file_uploader("📂 Buka file warta simpan sebagai docx lalu upload di sini",
-                               type=["docx"], key="w_up")
+    w_file = st .file_uploader(
+        "📂 Buka file warta simpan sebagai docx lalu upload di sini",
+        type=["docx"],
+        key="w_up")
 
     if w_file:
 
