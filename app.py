@@ -237,14 +237,21 @@ def add_smart_slide(
         slide_format="Projector",
         is_warta=False,
         current_bg=1):
-    if not content .strip():
+
+    if not content:
         return
 
-    words_to_check = re .sub(r'^\d+[\s\.\)]+', '', content).split()
+    clean_text = content .strip()
+
+    check_real_text = re .sub(r'♫|♪|[-—]+', '', clean_text).strip()
+
+    if not check_real_text and not is_title:
+        return
+
+    words_to_check = re .sub(r'^\d+[\s\.\)]+', '', clean_text).split()
 
     if not is_title and len(words_to_check) > 20:
-        parts = split_text_by_punctuation(content, limit=20)
-
+        parts = split_text_by_punctuation(clean_text, limit=20)
         if len(parts) > 1:
             for part in parts:
                 add_smart_slide(prs, part, theme_idx, footer, font_size,
@@ -284,11 +291,11 @@ def add_smart_slide(
             size = 68
         else:
 
-            if char_count <= 80:
+            if char_count <= 120:
                 size = 72
             else:
 
-                reduction = (char_count - 80)//4
+                reduction = (char_count - 80)//6
                 size = 72 - reduction
 
             if size < 44:
@@ -586,11 +593,17 @@ def generate_projector_logic(
 
                     if all_lines:
                         for n in range(0, len(all_lines), 2):
-                            add_smart_slide(prs,
-                                            "\n".join(all_lines[n:n + 2]),
-                                            theme_idx,
-                                            slide_format=slide_format,
-                                            current_bg=active_bg)
+
+                            content_to_print = "\n".join(
+                                all_lines[n:n + 2]).strip()
+
+                            if content_to_print:
+                                add_smart_slide(
+                                    prs,
+                                    content_to_print,
+                                    theme_idx,
+                                    slide_format=slide_format,
+                                    current_bg=active_bg)
                         all_lines = []
 
                     stand_text = "JONGJONG"if bahasa == 'Batak'else 'BERDIRI'
@@ -602,15 +615,19 @@ def generate_projector_logic(
                         current_bg=active_bg)
 
                 elif not txt:
-
                     if all_lines:
                         for n in range(0, len(all_lines), 2):
-                            add_smart_slide(prs,
-                                            "\n".join(all_lines[n:n + 2]),
-                                            theme_idx,
-                                            slide_format=slide_format,
-                                            current_bg=active_bg)
+                            combined_text = "\n".join(
+                                all_lines[n:n + 2]).strip()
+                            if combined_text:
+                                add_smart_slide(
+                                    prs,
+                                    combined_text,
+                                    theme_idx,
+                                    slide_format=slide_format,
+                                    current_bg=active_bg)
                         all_lines = []
+
                 else:
 
                     sub_lines = txt .split('\n')
@@ -712,6 +729,22 @@ def generate_projector_logic(
                     break
                 i += 1
 
+            i += 1
+            continue
+
+        elif check_match(line_clean, key["2_votum"]):
+            active_bg = random .randint(1, 214)
+
+            judul_votum = "VOTUM\nINTROITUS\nDOA"if bahasa == "Indonesia"else "VOTUM\nINTROITUS\nTANGIANG"
+
+            add_smart_slide(
+                prs,
+                judul_votum,
+                0,
+                font_size=72,
+                slide_format=slide_format,
+                current_bg=active_bg
+            )
             i += 1
             continue
 
