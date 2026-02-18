@@ -44,7 +44,7 @@ def apply_background(prs, slide, bg_path):
         solidFill = spPr.xpath('.//a:solidFill')[0]
         srgbClr = solidFill.xpath('.//a:srgbClr')[0]
         etree.SubElement(
-            srgbClr, '{http://schemas.openxmlformats.org/drawingml/2006/main}alpha', val='60000')
+            srgbClr, '{http://schemas.openxmlformats.org/drawingml/2006/main}alpha', val='30000')
 
         overlay.line.fill.background()
         slide.shapes._spTree.remove(pic._element)
