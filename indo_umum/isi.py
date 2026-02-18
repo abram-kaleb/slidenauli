@@ -15,8 +15,11 @@ def extract_isi(doc):
 
     re_nomor = re.compile(r"^\s*(\d{1,2})[\.\s:]+(.*)", re.IGNORECASE)
     re_koor = re.compile(r"K\s*O\s*O\s*R", re.IGNORECASE)
-    re_limit_koor = re.compile(
-        r"BERNYANYI|KHOTBAH|K\s*H\s*O\s*T\s*B\s*A\s*H|WARTA|DOA|P\s*:", re.IGNORECASE)
+    # CARA RADIKAL: Perluas limit pemutus KOOR agar tidak bocor ke section berikutnya
+    re_limit_umum = re.compile(
+        r"BERNYANYI|KHOTBAH|K\s*H\s*O\s*T\s*B\s*A\s*H|WARTA|DOA|P\s*:|VOTUM|HUKUM|EPISTEL|PENGAKUAN",
+        re.IGNORECASE
+    )
 
     sections = []
     current_section = None
@@ -26,11 +29,9 @@ def extract_isi(doc):
         match_num = re_nomor.match(text)
         normalized_text = text.upper().replace(" ", "")
 
-        # Cek apakah ini keyword (Votum, Hukum, dll)
         is_keyword = any(normalized_text.startswith(
             k.replace(" ", "")) for k in keywords_acara)
 
-        # CARA RADIKAL: Jangan anggap keyword jika teks terlalu panjang (berarti itu isi/penjelasan)
         if is_keyword and len(text) > 60 and not match_num:
             is_keyword = False
 
@@ -55,14 +56,33 @@ def extract_isi(doc):
             }
         else:
             if current_section:
+                # Jika sedang dalam section KOOR
                 if current_section["is_koor"]:
-                    if re_limit_koor.search(text):
-                        current_section["is_koor"] = False
-                        current_section["content_lines"].append(text)
+                    # Jika bertemu keyword acara lain di tengah paragraf, paksa ganti section
+                    if re_limit_umum.search(text):
+                        sections.append(current_section)
+                        current_section = {
+                            "nomor": counter_id,
+                            "header_lines": [text],
+                            "content_lines": [],
+                            "is_koor": False
+                        }
+                        counter_id += 1
+                    # Jika ada tanda pemisah waktu/jadwal, masukkan ke judul KOOR
                     elif "-" in text or "PKL" in text.upper():
                         current_section["header_lines"].append(text)
                     else:
                         current_section["content_lines"].append(text)
+                # Jika section biasa tapi ada kata BERNYANYI/KHOTBAH muncul mendadak
+                elif "BERNYANYI" in text.upper() or "KHOTBAH" in text.upper().replace(" ", ""):
+                    sections.append(current_section)
+                    current_section = {
+                        "nomor": counter_id,
+                        "header_lines": [text],
+                        "content_lines": [],
+                        "is_koor": False
+                    }
+                    counter_id += 1
                 else:
                     current_section["content_lines"].append(text)
 
@@ -94,7 +114,9 @@ if __name__ == "__main__":
             with st.expander(f"Acara {section['nomor']}: {section['judul']}"):
                 if section['isi']:
                     for line in section['isi']:
-                        if re.match(r"^[PLJS]\s*[:\-]", line) or "BERNYANYI" in line.upper() or "KHOTBAH" in line.upper().replace(" ", ""):
+                        if (re.match(r"^[PLJS]\s*[:\-]", line) or
+                            "BERNYANYI" in line.upper() or
+                                "KHOTBAH" in line.upper().replace(" ", "")):
                             st.markdown(f"**{line}**")
                         elif line.startswith("[") or "---" in line:
                             st.caption(line)

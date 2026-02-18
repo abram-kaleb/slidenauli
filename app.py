@@ -5,9 +5,13 @@ import logic
 import indo_umum.cover as indo_cover
 import indo_umum.isi as indo_isi
 import indo_umum.ppt as indo_ppt
+import indo_umum.ppt_stream as indo_ppt_stream
+
 import batak_umum.cover as batak_cover
 import batak_umum.isi as batak_isi
 import batak_umum.ppt as batak_ppt
+import batak_umum.ppt_stream as batak_ppt_stream
+
 import remaja.cover as remaja_cover
 import remaja.isi as remaja_isi
 import remaja.ppt as remaja_ppt
@@ -91,7 +95,7 @@ st.markdown("""
         margin-top: 20px;
     }
     </style>
-    
+
     <div class="custom-header">
         <h1 class="header-title">SLIDE<span class="header-pink">NAULI</span> 🚀</h1>
         <p class="header-subtitle">Document converter by Multimedia HKBP Perum 2 Bekasi</p>
@@ -208,8 +212,16 @@ if st.session_state.tata_bytes:
     with c_set1:
         selected_fmt = st.selectbox("Format", options, index=options.index(
             det_tata) if det_tata in options else 0)
+
     with c_set2:
-        use_bg = st.selectbox("Gunakan Background", ["Ya", "Tidak"], index=1)
+        if selected_fmt in ["Ibadah Indonesia Umum", "Ibadah Batak Umum"]:
+            selected_mode = st.selectbox(
+                "Mode Tampilan", ["Projector", "YouTube"], key="mode_tampilan_key")
+        else:
+            selected_mode = "Projector"
+
+        use_bg = st.selectbox("Gunakan Background", [
+                              "Ya", "Tidak"], index=1, key="global_bg_key")
 
     m_cover, m_isi, m_ppt = mapping[selected_fmt]
     data_cover = m_cover.extract_cover(doc_tata)
@@ -219,13 +231,26 @@ if st.session_state.tata_bytes:
         st.session_state.warta_bytes) if st.session_state.warta_bytes else None
 
     if st.button("🚀 Proses Dokumen"):
-        c_info = {"minggu": data_cover.get('minggu', ''),
-                  "topik": data_cover.get('topik', ''),
-                  "tanggal": data_cover.get('tanggal', ''),
-                  "use_bg": True if use_bg == "Ya" else False}
+        if selected_mode == "YouTube":
+            m_ppt_module = batak_ppt_stream if selected_fmt == "Ibadah Batak Umum" else indo_ppt_stream
+        else:
+            m_ppt_module = m_ppt
+
+        c_info = {
+            "minggu": data_cover.get('minggu', ''),
+            "topik": data_cover.get('topik', ''),
+            "tanggal": data_cover.get('tanggal', ''),
+            "use_bg": True if use_bg == "Ya" else False,
+            "mode": selected_mode
+        }
 
         final_ppt = logic.merge_and_generate(
-            final_warta_doc, c_info, data_isi, m_ppt.generate_slides, w_mode_final)
+            final_warta_doc,
+            c_info,
+            data_isi,
+            m_ppt_module.generate_slides,  # Menggunakan module yang sudah dipilih
+            w_mode_final
+        )
 
         file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal', 'slide')}.pptx".replace(
             " ", "_")
