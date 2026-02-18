@@ -113,64 +113,57 @@ st.markdown("""
 load_dotenv()
 
 
-def send_telegram_log(file_name, format_type, mode, bg):
+def send_telegram_log(file_name, format_type, mode="-", bg="-", status="SUCCESS", note=""):
     token = os.getenv("TELEGRAM_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
-
     if not token or not chat_id:
         return
 
-    # 1. Ambil IP
     try:
         client_ip = requests.get('https://api.ipify.org', timeout=3).text
     except:
         client_ip = "Unknown"
 
-    # 2. Bedah Header (Device & Browser)
     try:
         ua = st.context.headers.get("User-Agent", "")
-
-        # Deteksi OS/Device
+        # Deteksi Device
         if "iPhone" in ua:
-            device = "📱 iPhone"
+            device = "iPhone"
         elif "Android" in ua:
-            device = "📱 Android"
+            device = "Android"
         elif "Windows" in ua:
-            device = "💻 Windows PC"
+            device = "Windows PC"
         elif "Macintosh" in ua:
-            device = "💻 MacBook"
-        elif "Linux" in ua:
-            device = "💻 Linux"
+            device = "MacBook"
         else:
-            device = "❓ Unknown Device"
+            device = "Unknown Device"
 
         # Deteksi Browser
         if "Edg/" in ua:
-            browser = "🌐 Edge"
-        elif "Chrome" in ua and "Safari" in ua:
-            browser = "🌐 Chrome"
+            browser = "Edge"
+        elif "Chrome" in ua:
+            browser = "Chrome"
         elif "Firefox" in ua:
-            browser = "🌐 Firefox"
+            browser = "Firefox"
         elif "Safari" in ua:
-            browser = "🌐 Safari"
+            browser = "Safari"
         else:
-            browser = "🌐 Unknown Browser"
+            browser = "Browser"
     except:
-        device = "⚠️ Hidden"
-        browser = "⚠️ Hidden"
+        device, browser = "Hidden", "Hidden"
 
     url = f"https://api.telegram.org/bot{token.strip()}/sendMessage"
 
     pesan = (
-        f"🚀 *SLIDENAULI LOG*\n\n"
-        f"📄 *File:* `{file_name}`\n"
-        f"🛠 *Format:* {format_type}\n"
-        f"📺 *Mode:* {mode} | *BG:* {bg}\n"
-        f"🖼 *BG:* {bg}\n"
-        f"🌐 *IP:* `{client_ip}`\n"
-        f"🆔 *Device:* {device}\n"
-        f"🧭 *Browser:* {browser}\n"
-        f"⏰ *Waktu:* {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+        f" *SLIDENAULI LOG - {status}*\n\n"
+        f" *File:* `{file_name}`\n"
+        f" *Format:* {format_type}\n"
+        f" *Mode:* {mode} | *BG:* {bg}\n"
+        f" *IP:* `{client_ip}`\n"
+        f" *Device:* {device}\n"
+        f" *Browser:* {browser}\n"
+        f" *Audit:* `{note}`\n"
+        f" *Waktu:* {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
     )
 
     try:
@@ -266,9 +259,8 @@ if st.session_state.tata_bytes and st.session_state.warta_bytes:
     else:
         if det_warta == "Warta Remaja":
             st.error(
-                "❌ Kesalahan: Warta Remaja seharusnya digunakan untuk Tata Ibadah Remaja.")
+                "❌ Warta Remaja seharusnya digunakan untuk Tata Ibadah Remaja.")
         w_mode_final = "Normal"
-
 if st.session_state.tata_bytes:
     doc_tata = get_document(st.session_state.tata_bytes)
     st.markdown('<h2 class="section-title">2. Pengaturan</h2>',
@@ -306,46 +298,63 @@ if st.session_state.tata_bytes:
     final_warta_doc = get_document(
         st.session_state.warta_bytes) if st.session_state.warta_bytes else None
 
+    st.markdown("---")
 
-# --- UI SECTION ---
-if st.button("🚀 Proses Dokumen"):
-    if selected_mode == "YouTube":
-        m_ppt_module = batak_ppt_stream if selected_fmt == "Ibadah Batak Umum" else indo_ppt_stream
+    if "Warta" in det_tata:
+        st.error(
+            "❌ File Tata Ibadah terdeteksi sebagai Warta. Mohon periksa kembali upload-an Anda.")
     else:
-        m_ppt_module = m_ppt
+        if st.button("🚀 Proses Dokumen"):
+            with st.spinner("Sedang meracik slide..."):
+                if selected_mode == "YouTube":
+                    m_ppt_module = batak_ppt_stream if selected_fmt == "Ibadah Batak Umum" else indo_ppt_stream
+                else:
+                    m_ppt_module = m_ppt
 
-    c_info = {
-        "minggu": data_cover.get('minggu', ''),
-        "topik": data_cover.get('topik', ''),
-        "tanggal": data_cover.get('tanggal', ''),
-        "use_bg": True if use_bg == "Ya" else False,
-        "mode": selected_mode
-    }
+                c_info = {
+                    "minggu": data_cover.get('minggu', ''),
+                    "topik": data_cover.get('topik', ''),
+                    "tanggal": data_cover.get('tanggal', ''),
+                    "use_bg": True if use_bg == "Ya" else False,
+                    "mode": selected_mode
+                }
 
-    final_ppt = logic.merge_and_generate(
-        final_warta_doc,
-        c_info,
-        data_isi,
-        m_ppt_module.generate_slides,
-        w_mode_final
-    )
+                final_ppt = logic.merge_and_generate(
+                    final_warta_doc,
+                    c_info,
+                    data_isi,
+                    m_ppt_module.generate_slides,
+                    w_mode_final
+                )
 
-    file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal', 'slide')}.pptx".replace(
-        " ", "_")
+                file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal', 'slide')}.pptx".replace(
+                    " ", "_")
 
-    send_telegram_log(file_name, selected_fmt, selected_mode, use_bg)
+                # KIRIM LOG DI SINI (Tepat setelah file siap, sebelum download)
+                audit_info = f"Tata: {det_tata} | Warta: {det_warta}"
+                send_telegram_log(
+                    file_name,
+                    selected_fmt,
+                    selected_mode,
+                    use_bg,
+                    note=audit_info
+                )
 
-    st.success("✅ Dokumen berhasil diproses!")
-    st.download_button("📥 Download PPT", final_ppt, file_name)
+                st.download_button(
+                    label="📥 Download PPT",
+                    data=final_ppt,
+                    file_name=file_name,
+                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                )
+
 
 if 'data_cover' in locals() and data_cover:
     st.markdown(f"""
         <div class="meta-note">
-            <b>Informasi:</b><br>
-            • <b>Minggu:</b> {data_cover.get('minggu', '-')}<br>
-            • <b>Tanggal:</b> {data_cover.get('tanggal', '-')}<br>
-            • <b>Topik:</b> {data_cover.get('topik', '-')}
+            <b>Minggu:</b> {data_cover.get('minggu', '-')}<br>
+            <b>Tanggal:</b> {data_cover.get('tanggal', '-')}<br>
+            <b>Topik:</b> {data_cover.get('topik', '-')}
         </div>
     """, unsafe_allow_html=True)
 else:
-    st.info("Silakan upload file Tata Ibadah untuk melihat informasi dokumen.")
+    st.info("")
