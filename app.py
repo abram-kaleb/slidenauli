@@ -330,7 +330,7 @@ if st.button("🚀 Proses Dokumen"):
         w_mode_final
     )
 
-    file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal' 'slide')}.pptx".replace(
+    file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal', 'slide')}.pptx".replace(
         " ", "_")
 
     send_telegram_log(file_name, selected_fmt, selected_mode, use_bg)
@@ -338,11 +338,14 @@ if st.button("🚀 Proses Dokumen"):
     st.success("✅ Dokumen berhasil diproses!")
     st.download_button("📥 Download PPT", final_ppt, file_name)
 
-st.markdown(f"""
-    <div class="meta-note">
-        <b>Informasi:</b><br>
-        • <b>Minggu:</b> {data_cover.get('minggu', '-')}<br>
-        • <b>Tanggal:</b> {data_cover.get('tanggal', '-')}<br>
-        • <b>Topik:</b> {data_cover.get('topik', '-')}
-    </div>
-""", unsafe_allow_html=True)
+if 'data_cover' in locals() and data_cover:
+    st.markdown(f"""
+        <div class="meta-note">
+            <b>Informasi:</b><br>
+            • <b>Minggu:</b> {data_cover.get('minggu', '-')}<br>
+            • <b>Tanggal:</b> {data_cover.get('tanggal', '-')}<br>
+            • <b>Topik:</b> {data_cover.get('topik', '-')}
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    st.info("Silakan upload file Tata Ibadah untuk melihat informasi dokumen.")
