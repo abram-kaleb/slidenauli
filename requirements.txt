@@ -1,5 +1,4 @@
 lxml
 python_docx
 python_pptx
-pywin32
 streamlit
