@@ -2,4 +2,3 @@ lxml
 python_docx
 python_pptx
 streamlit
-libreoffice
