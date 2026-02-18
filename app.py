@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 from docx import Document
 import logic
@@ -16,10 +17,6 @@ import sore.ppt as sore_ppt
 import skm.cover as skm_cover
 import skm.isi as skm_isi
 import skm.ppt as skm_ppt
-import os
-import win32com.client
-import pythoncom
-import tempfile
 
 st.set_page_config(page_title="SLIDENAULI", layout="centered")
 
@@ -31,39 +28,6 @@ if "last_tata_name" not in st.session_state:
     st.session_state.last_tata_name = None
 if "last_warta_name" not in st.session_state:
     st.session_state.last_warta_name = None
-
-
-def convert_doc_to_docx(file_bytes, filename):
-    pythoncom.CoInitialize()
-    temp_dir = tempfile.gettempdir()
-    input_path = os.path.join(temp_dir, filename)
-    output_path = input_path + "x"
-
-    with open(input_path, "wb") as f:
-        f.write(file_bytes)
-
-    try:
-        word = win32com.client.Dispatch("Word.Application")
-        word.Visible = False
-        doc = word.Documents.Open(os.path.abspath(input_path))
-        doc.SaveAs2(os.path.abspath(output_path), FileFormat=16)
-        doc.Close()
-        word.Quit()
-
-        with open(output_path, "rb") as f:
-            converted_bytes = f.read()
-
-        if os.path.exists(input_path):
-            os.remove(input_path)
-        if os.path.exists(output_path):
-            os.remove(output_path)
-        return converted_bytes
-    except Exception as e:
-        if os.path.exists(input_path):
-            os.remove(input_path)
-        st.error(f"Gagal konversi {filename}: {e}")
-        return None
-
 
 st.markdown("""
     <style>
@@ -145,25 +109,20 @@ st.markdown('<h2 class="section-title">1. Dokumen</h2>',
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<span class="upload-label">📁 Upload Tata Ibadah (.doc atau .docx)</span>',
+    st.markdown('<span class="upload-label">📁 TATA IBADAH \n+ Buka Tata Ibadah simpan sebagai (.docx) \n+ Upload di sini</span>',
                 unsafe_allow_html=True)
     uploaded_tata = st.file_uploader(
-        "tata", type=["docx", "doc"], key="tata_up", label_visibility="collapsed")
+        "tata", type=["docx"], key="tata_up", label_visibility="collapsed")
 
 with col2:
-    st.markdown('<span class="upload-label">📁 Upload Warta (.doc atau .docx)</span>',
+    st.markdown('<span class="upload-label">📁 WARTA \n+ Buka Warta simpan sebagai (.docx) \n+ Upload di sini</span>',
                 unsafe_allow_html=True)
     uploaded_warta = st.file_uploader(
-        "warta", type=["docx", "doc"], key="warta_up", label_visibility="collapsed")
+        "warta", type=["docx"], key="warta_up", label_visibility="collapsed")
 
 if uploaded_tata:
     if uploaded_tata.name != st.session_state.last_tata_name:
-        if uploaded_tata.name.endswith(".doc"):
-            with st.spinner(f"Mengonversi {uploaded_tata.name}..."):
-                st.session_state.tata_bytes = convert_doc_to_docx(
-                    uploaded_tata.getvalue(), uploaded_tata.name)
-        else:
-            st.session_state.tata_bytes = uploaded_tata.getvalue()
+        st.session_state.tata_bytes = uploaded_tata.getvalue()
         st.session_state.last_tata_name = uploaded_tata.name
 else:
     st.session_state.tata_bytes = None
@@ -171,12 +130,7 @@ else:
 
 if uploaded_warta:
     if uploaded_warta.name != st.session_state.last_warta_name:
-        if uploaded_warta.name.endswith(".doc"):
-            with st.spinner(f"Mengonversi {uploaded_warta.name}..."):
-                st.session_state.warta_bytes = convert_doc_to_docx(
-                    uploaded_warta.getvalue(), uploaded_warta.name)
-        else:
-            st.session_state.warta_bytes = uploaded_warta.getvalue()
+        st.session_state.warta_bytes = uploaded_warta.getvalue()
         st.session_state.last_warta_name = uploaded_warta.name
 else:
     st.session_state.warta_bytes = None
@@ -232,7 +186,7 @@ if st.session_state.tata_bytes:
         "Ibadah Sore": (sore_cover, sore_isi, sore_ppt),
         "Ibadah Remaja": (remaja_cover, remaja_isi, remaja_ppt),
         "Ibadah Batak Umum": (batak_cover, batak_isi, batak_ppt),
-        "Ibadah Indonesia Umum": (indo_cover, indo_isi, indo_ppt)
+        "Ibadah Indonesia Umum": (indo_cover, logic, indo_ppt)
     }
 
     with c_set1:
@@ -248,15 +202,19 @@ if st.session_state.tata_bytes:
     final_warta_doc = get_document(
         st.session_state.warta_bytes) if st.session_state.warta_bytes else None
 
-    if st.button("🚀 Generate Integrated PPT"):
+    if st.button("🚀 Proses Dokumen"):
         c_info = {"minggu": data_cover.get('minggu', ''),
                   "topik": data_cover.get('topik', ''),
                   "tanggal": data_cover.get('tanggal', ''),
                   "use_bg": True if use_bg == "Ya" else False}
+
         final_ppt = logic.merge_and_generate(
             final_warta_doc, c_info, data_isi, m_ppt.generate_slides, w_mode_final)
-        st.download_button("📥 Download Final PPTX", final_ppt,
-                           f"SLIDENAULI_{data_cover.get('minggu', 'slide').replace(' ', '_')}.pptx")
+
+        file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal', 'slide')}.pptx".replace(
+            " ", "_")
+
+        st.download_button("📥 Download PPT", final_ppt, file_name)
 
     st.markdown(f"""
         <div class="meta-note">
