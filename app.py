@@ -202,7 +202,7 @@ if st.session_state.tata_bytes:
         "Ibadah Sore": (sore_cover, sore_isi, sore_ppt),
         "Ibadah Remaja": (remaja_cover, remaja_isi, remaja_ppt),
         "Ibadah Batak Umum": (batak_cover, batak_isi, batak_ppt),
-        "Ibadah Indonesia Umum": (indo_cover, logic, indo_ppt)
+        "Ibadah Indonesia Umum": (indo_cover, indo_isi, indo_ppt)
     }
 
     with c_set1:
