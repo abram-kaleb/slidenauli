@@ -100,7 +100,9 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 
-@st.cache_resource
+# Gunakan cache_data (bukan cache_resource) agar tidak menyimpan
+# Document object lama saat bytes berubah setelah konversi .doc → .docx
+@st.cache_data
 def get_document(file_bytes):
     return Document(logic.BytesIO(file_bytes))
 
