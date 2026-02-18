@@ -2,3 +2,5 @@ lxml
 python_docx
 python_pptx
 streamlit
+python-dotenv
+requests

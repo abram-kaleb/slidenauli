@@ -23,6 +23,12 @@ import skm.isi as skm_isi
 import skm.ppt as skm_ppt
 from doc_converter import ensure_docx_bytes
 
+import requests
+import os
+from datetime import datetime
+from dotenv import load_dotenv
+
+
 st.set_page_config(page_title="SLIDENAULI", layout="centered")
 
 if "tata_bytes" not in st.session_state:
@@ -102,6 +108,76 @@ st.markdown("""
     </div>
     <hr>
     """, unsafe_allow_html=True)
+
+
+load_dotenv()
+
+
+def send_telegram_log(file_name, format_type, mode, bg):
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not token or not chat_id:
+        return
+
+    # 1. Ambil IP
+    try:
+        client_ip = requests.get('https://api.ipify.org', timeout=3).text
+    except:
+        client_ip = "Unknown"
+
+    # 2. Bedah Header (Device & Browser)
+    try:
+        ua = st.context.headers.get("User-Agent", "")
+
+        # Deteksi OS/Device
+        if "iPhone" in ua:
+            device = "📱 iPhone"
+        elif "Android" in ua:
+            device = "📱 Android"
+        elif "Windows" in ua:
+            device = "💻 Windows PC"
+        elif "Macintosh" in ua:
+            device = "💻 MacBook"
+        elif "Linux" in ua:
+            device = "💻 Linux"
+        else:
+            device = "❓ Unknown Device"
+
+        # Deteksi Browser
+        if "Edg/" in ua:
+            browser = "🌐 Edge"
+        elif "Chrome" in ua and "Safari" in ua:
+            browser = "🌐 Chrome"
+        elif "Firefox" in ua:
+            browser = "🌐 Firefox"
+        elif "Safari" in ua:
+            browser = "🌐 Safari"
+        else:
+            browser = "🌐 Unknown Browser"
+    except:
+        device = "⚠️ Hidden"
+        browser = "⚠️ Hidden"
+
+    url = f"https://api.telegram.org/bot{token.strip()}/sendMessage"
+
+    pesan = (
+        f"🚀 *SLIDENAULI LOG*\n\n"
+        f"📄 *File:* `{file_name}`\n"
+        f"🛠 *Format:* {format_type}\n"
+        f"📺 *Mode:* {mode} | *BG:* {bg}\n"
+        f"🖼 *BG:* {bg}\n"
+        f"🌐 *IP:* `{client_ip}`\n"
+        f"🆔 *Device:* {device}\n"
+        f"🧭 *Browser:* {browser}\n"
+        f"⏰ *Waktu:* {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    )
+
+    try:
+        requests.post(url, data={
+                      "chat_id": chat_id, "text": pesan, "parse_mode": "Markdown"}, timeout=5)
+    except:
+        pass
 
 
 def get_document(file_bytes):
@@ -230,38 +306,43 @@ if st.session_state.tata_bytes:
     final_warta_doc = get_document(
         st.session_state.warta_bytes) if st.session_state.warta_bytes else None
 
-    if st.button("🚀 Proses Dokumen"):
-        if selected_mode == "YouTube":
-            m_ppt_module = batak_ppt_stream if selected_fmt == "Ibadah Batak Umum" else indo_ppt_stream
-        else:
-            m_ppt_module = m_ppt
 
-        c_info = {
-            "minggu": data_cover.get('minggu', ''),
-            "topik": data_cover.get('topik', ''),
-            "tanggal": data_cover.get('tanggal', ''),
-            "use_bg": True if use_bg == "Ya" else False,
-            "mode": selected_mode
-        }
+# --- UI SECTION ---
+if st.button("🚀 Proses Dokumen"):
+    if selected_mode == "YouTube":
+        m_ppt_module = batak_ppt_stream if selected_fmt == "Ibadah Batak Umum" else indo_ppt_stream
+    else:
+        m_ppt_module = m_ppt
 
-        final_ppt = logic.merge_and_generate(
-            final_warta_doc,
-            c_info,
-            data_isi,
-            m_ppt_module.generate_slides,  # Menggunakan module yang sudah dipilih
-            w_mode_final
-        )
+    c_info = {
+        "minggu": data_cover.get('minggu', ''),
+        "topik": data_cover.get('topik', ''),
+        "tanggal": data_cover.get('tanggal', ''),
+        "use_bg": True if use_bg == "Ya" else False,
+        "mode": selected_mode
+    }
 
-        file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal', 'slide')}.pptx".replace(
-            " ", "_")
+    final_ppt = logic.merge_and_generate(
+        final_warta_doc,
+        c_info,
+        data_isi,
+        m_ppt_module.generate_slides,
+        w_mode_final
+    )
 
-        st.download_button("📥 Download PPT", final_ppt, file_name)
+    file_name = f"ppt_{selected_fmt}_{data_cover.get('tanggal' 'slide')}.pptx".replace(
+        " ", "_")
 
-    st.markdown(f"""
-        <div class="meta-note">
-            <b>Informasi:</b><br>
-            • <b>Minggu:</b> {data_cover.get('minggu', '-')}<br>
-            • <b>Tanggal:</b> {data_cover.get('tanggal', '-')}<br>
-            • <b>Topik:</b> {data_cover.get('topik', '-')}
-        </div>
-    """, unsafe_allow_html=True)
+    send_telegram_log(file_name, selected_fmt, selected_mode, use_bg)
+
+    st.success("✅ Dokumen berhasil diproses!")
+    st.download_button("📥 Download PPT", final_ppt, file_name)
+
+st.markdown(f"""
+    <div class="meta-note">
+        <b>Informasi:</b><br>
+        • <b>Minggu:</b> {data_cover.get('minggu', '-')}<br>
+        • <b>Tanggal:</b> {data_cover.get('tanggal', '-')}<br>
+        • <b>Topik:</b> {data_cover.get('topik', '-')}
+    </div>
+""", unsafe_allow_html=True)
