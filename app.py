@@ -17,6 +17,7 @@ import sore.ppt as sore_ppt
 import skm.cover as skm_cover
 import skm.isi as skm_isi
 import skm.ppt as skm_ppt
+from doc_converter import ensure_docx_bytes
 
 st.set_page_config(page_title="SLIDENAULI", layout="centered")
 
@@ -109,29 +110,45 @@ st.markdown('<h2 class="section-title">1. Dokumen</h2>',
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown('<span class="upload-label">📁 TATA IBADAH \n+ Buka Tata Ibadah simpan sebagai (.docx) \n+ Upload di sini</span>',
+    st.markdown('<span class="upload-label">📁 TATA IBADAH \n+ Upload file .doc atau .docx</span>',
                 unsafe_allow_html=True)
     uploaded_tata = st.file_uploader(
-        "tata", type=["docx"], key="tata_up", label_visibility="collapsed")
+        "tata", type=["doc", "docx"], key="tata_up", label_visibility="collapsed")
 
 with col2:
-    st.markdown('<span class="upload-label">📁 WARTA \n+ Buka Warta simpan sebagai (.docx) \n+ Upload di sini</span>',
+    st.markdown('<span class="upload-label">📁 WARTA \n+ Upload file .doc atau .docx</span>',
                 unsafe_allow_html=True)
     uploaded_warta = st.file_uploader(
-        "warta", type=["docx"], key="warta_up", label_visibility="collapsed")
+        "warta", type=["doc", "docx"], key="warta_up", label_visibility="collapsed")
 
 if uploaded_tata:
     if uploaded_tata.name != st.session_state.last_tata_name:
-        st.session_state.tata_bytes = uploaded_tata.getvalue()
-        st.session_state.last_tata_name = uploaded_tata.name
+        with st.spinner("Memproses file Tata Ibadah..."):
+            try:
+                tata_bytes, _ = ensure_docx_bytes(
+                    uploaded_tata.getvalue(), uploaded_tata.name)
+                st.session_state.tata_bytes = tata_bytes
+                st.session_state.last_tata_name = uploaded_tata.name
+            except RuntimeError as e:
+                st.error(f"❌ Gagal memproses file Tata Ibadah: {e}")
+                st.session_state.tata_bytes = None
+                st.session_state.last_tata_name = None
 else:
     st.session_state.tata_bytes = None
     st.session_state.last_tata_name = None
 
 if uploaded_warta:
     if uploaded_warta.name != st.session_state.last_warta_name:
-        st.session_state.warta_bytes = uploaded_warta.getvalue()
-        st.session_state.last_warta_name = uploaded_warta.name
+        with st.spinner("Memproses file Warta..."):
+            try:
+                warta_bytes, _ = ensure_docx_bytes(
+                    uploaded_warta.getvalue(), uploaded_warta.name)
+                st.session_state.warta_bytes = warta_bytes
+                st.session_state.last_warta_name = uploaded_warta.name
+            except RuntimeError as e:
+                st.error(f"❌ Gagal memproses file Warta: {e}")
+                st.session_state.warta_bytes = None
+                st.session_state.last_warta_name = None
 else:
     st.session_state.warta_bytes = None
     st.session_state.last_warta_name = None
