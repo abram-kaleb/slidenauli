@@ -1,6 +1,5 @@
-lxml==6.0.2
-python_docx==1.2.0
-python_pptx==1.0.2
-pywin32==311
-streamlit==1.53.1
-~treamlit==1.52.2
+lxml
+python_docx
+python_pptx
+pywin32
+streamlit
