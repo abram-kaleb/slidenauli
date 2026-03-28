@@ -13,7 +13,7 @@ import warta.warta_wide as warta_wide
 
 
 def detect_format(doc):
-    full_text = "\n".join([p.text for p in doc.paragraphs[:40]]).lower()
+    full_text = "\n".join([p.text for p in doc.paragraphs[:20]]).lower()
     if "warta" in full_text:
         if any(x in full_text for x in ["remaja", "naposobulung"]):
             return "Warta Remaja"

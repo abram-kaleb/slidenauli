@@ -155,7 +155,7 @@ def send_telegram_log(file_name, format_type, mode="-", bg="-", status="SUCCESS"
     url = f"https://api.telegram.org/bot{token.strip()}/sendMessage"
 
     pesan = (
-        f" *SLIDENAULI LOG - {status}*\n\n"
+        f" *SLIDENAULI LOG *\n\n"
         f" *File:* `{file_name}`\n"
         f" *Format:* {format_type}\n"
         f" *Mode:* {mode} | *BG:* {bg}\n"
